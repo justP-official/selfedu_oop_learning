@@ -1,0 +1,13 @@
+Подвиг 1. Отметьте все верные, с точки зрения стандарта PEP8, имена классов.
+
+data_base
+
+DataBase  +
+
+Data123   +
+
+dataBase
+
+SergeyBalakirev  +
+
+Sergey_Balakirev

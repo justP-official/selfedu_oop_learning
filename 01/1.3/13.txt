@@ -1,0 +1,17 @@
+Подвиг 13. Выберите верные способы удаления атрибута tp из класса Point.
+
+Point.tp = None
+
+delattr('Point', 'tp')
+
+del Point['tp']
+
+del Point.tp    +
+
+delattr(Point, tp)
+
+delattr(Point, 'tp')    +
+
+Point.tp = 0
+
+del tp of Point
