@@ -1,0 +1,18 @@
+Подвиг 3. В программе объявлен следующий класс с одним методом:
+
+class Math:
+    @staticmethod
+    def sqrt(x):
+        return x ** 0.5
+И создается объект этого класса:
+
+m = Math()
+Выберите все верные варианты вызова метода sqrt:
+
+m.Math.sqrt(3)
+
+res = Math.sqrt(m, 4)
+
+res = Math.sqrt(4)  +
+
+res = m.sqrt(2)  +
