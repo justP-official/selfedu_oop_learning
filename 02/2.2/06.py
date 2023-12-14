@@ -105,24 +105,6 @@ class Stack:
         if self.last is None:
             self.top = None
         return last
-        # ptr = self.top
-        # if ptr is None:
-        #     return
-        #
-        # while ptr.next != self.last:
-        #     ptr = ptr.next
-        #
-        # if ptr:
-        #     ptr.next = None
-        #
-        # last = self.last
-        #
-        # self.last = ptr
-        #
-        # if self.last is None:
-        #     self.top = None
-        #
-        # return last
 
     def get_data(self):
         res = []
