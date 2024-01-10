@@ -1,0 +1,25 @@
+Подвиг 4. Имеется следующая иерархия классов исключений:
+(ссылка на рисунок: https://ucarecdn.com/5a24282a-6c83-4255-8efa-70d864f81d1e/)
+
+И записан фрагмент программы:
+
+try:
+    x, y = map(float, input().split())
+    d = x / y
+except ArithmeticError:
+    print('ArithmeticError')
+except ZeroDivisionError:
+    print('ZeroDivisionError')
+
+В каких случаях выполнение программы перейдет в блок обработки исключения ZeroDivisionError?
+
+
+ни в каких, так как класс ZeroDivisionError является дочерним по отношению к классу ArithmeticError  +
+
+если значение x будет равно нулю
+
+всегда будет переходить при возникновении исключения типа ZeroDivisionError
+
+если ввести хотя бы одно не числовое значение
+
+если значение y будет равно нулю
