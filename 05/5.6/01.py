@@ -156,17 +156,15 @@ from random import randint
 
 
 class Ship:
-    def __init__(self, length, tp=1, x=None, y=None, pole=None):
+    def __init__(self, length, tp=1, x=None, y=None):
         self._length = length
         self._tp = tp
         self._x = x
         self._y = y
 
-        self._pole = pole
-
-        self.is_move = True
-
         self._cells = [1 for _ in range(self.length)]
+
+        self.is_move = all(map(lambda x: x == 1, self._cells))
 
     @property
     def length(self):
@@ -185,8 +183,8 @@ class Ship:
         self._is_move = value
 
     @property
-    def pole(self):
-        return self._pole
+    def cells(self):
+        return self._cells
 
     def set_start_coords(self, x, y):
         self._x = x
@@ -244,14 +242,19 @@ class Ship:
 
         return False
 
+    def take_damage(self, cell_index):
+        self[cell_index] = 2
+        self.is_move = False
+
     def __getitem__(self, item):
         return self._cells[item]
 
     def __setitem__(self, key, value):
-        if value == 2:
-            self.is_move = False
 
         self._cells[key] = value
+
+    def __bool__(self):
+        return not all(map(lambda x: x == 2, self.cells))
 
 
 class GamePole:
@@ -267,16 +270,16 @@ class GamePole:
         return self._ships
 
     def init(self):
-        self._ships = [Ship(4, tp=randint(1, 2), pole=self),
-                       Ship(3, tp=randint(1, 2), pole=self),
-                       Ship(3, tp=randint(1, 2), pole=self),
-                       Ship(2, tp=randint(1, 2), pole=self),
-                       Ship(2, tp=randint(1, 2), pole=self),
-                       Ship(2, tp=randint(1, 2), pole=self),
-                       Ship(1, tp=randint(1, 2), pole=self),
-                       Ship(1, tp=randint(1, 2), pole=self),
-                       Ship(1, tp=randint(1, 2), pole=self),
-                       Ship(1, tp=randint(1, 2), pole=self)
+        self._ships = [Ship(4, tp=randint(1, 2)),
+                       Ship(3, tp=randint(1, 2)),
+                       Ship(3, tp=randint(1, 2)),
+                       Ship(2, tp=randint(1, 2)),
+                       Ship(2, tp=randint(1, 2)),
+                       Ship(2, tp=randint(1, 2)),
+                       Ship(1, tp=randint(1, 2)),
+                       Ship(1, tp=randint(1, 2)),
+                       Ship(1, tp=randint(1, 2)),
+                       Ship(1, tp=randint(1, 2))
                        ]
 
         self.set_coords()
@@ -289,7 +292,7 @@ class GamePole:
                 x = randint(0, self.size - 1)
                 y = randint(0, self.size - 1)
 
-                tmp_ship = Ship(ships[i].length, ships[i].tp, x, y, ships[i].pole)
+                tmp_ship = Ship(ships[i].length, ships[i].tp, x, y)
 
                 if i == 0:
                     if not tmp_ship.is_out_pole(self.size):
@@ -312,27 +315,42 @@ class GamePole:
 
         for i in range(ship.length):
             r, c = ship_coords[i]
-            self.pole[r][c] = ship[i]
+            self[r, c] = ship[i]
 
     def update_ships_position(self):
         for i in range(self.size):
             for j in range(self.size):
-                self.pole[i][j] = 0
+                self[i, j] = 0
 
         ships = self.get_ships()
 
         for ship in ships:
-            self.add_ship_to_pole(ship)
+            x, y = ship.get_start_coords()
+            length = ship.length
+
+            ship_part = 0
+
+            if ship.tp == 1:
+                for j in range(x, x + length):
+                    self.pole[y][j] = ship[ship_part]
+                    ship_part += 1
+            elif ship.tp == 2:
+                for i in range(y, y + length):
+                    self.pole[i][x] = ship[ship_part]
+                    ship_part += 1
 
     def move_ships(self):
         ships = self.get_ships()
 
         for i in range(len(ships)):
+            if not ships[i].is_move:
+                continue
+
             old_x, old_y = ships[i].get_start_coords()
 
             ships[i].move(1)
             if not ships[i].is_out_pole(self.size) and \
-            not any(ships[i].is_collide(ships[j]) for j in range(len(ships)) if j != i):
+                    not any(ships[i].is_collide(ships[j]) for j in range(len(ships)) if j != i):
                 continue
             else:
                 ships[i].set_start_coords(old_x, old_y)
@@ -351,3 +369,159 @@ class GamePole:
 
     def get_pole(self):
         return tuple(tuple(row) for row in self.pole)
+
+    def __check_indexes(self, indexes):
+        if type(indexes) != tuple or len(indexes) != 2:
+            raise IndexError("Неверные координаты")
+
+        if any(not (0 <= x < self.size) for x in indexes if type(indexes) != slice):
+            raise IndexError("Неверные координаты")
+
+    def __bool__(self):
+        return any(self.get_ships())
+
+    def __getitem__(self, item):
+        self.__check_indexes(item)
+        x, y = item
+
+        return self.pole[y][x]
+
+    def __setitem__(self, key, value):
+        self.__check_indexes(key)
+        x, y = key
+
+        self.pole[y][x] = value
+
+
+class SeaBattle:
+    def __init__(self, size):
+        self.human_player = GamePole(size)
+        self.computer_player = GamePole(size)
+
+        self.step_counter = 0
+
+    def __bool__(self):
+        if not self.computer_player:
+            return False
+
+        if not self.human_player:
+            return False
+
+        return True
+
+    def start_game(self):
+        while self:
+            if self.step_counter % 2 == 0:
+                self.human_move()
+            else:
+                self.computer_move()
+
+            self.step_counter += 1
+
+        self.check_win()
+
+    def make_shoot(self, pole, x, y):
+        ships = pole.get_ships()
+
+        for ship in ships:
+            start_ship_x, start_ship_y = ship.get_start_coords()
+            end_ship_x, end_ship_y = start_ship_x, start_ship_y
+
+            if ship.tp == 1:
+                end_ship_x = start_ship_x + ship.length - 1
+            else:
+                end_ship_y = start_ship_y + ship.length - 1
+
+            if start_ship_x <= x <= end_ship_x and start_ship_y <= y <= end_ship_y:
+                if ship.tp == 1:
+                    ship.take_damage(x - start_ship_x)
+                else:
+                    ship.take_damage(y - start_ship_y)
+
+                if not ship:
+                    print("Убит!")
+
+                return
+
+    def computer_move(self):
+        while True:
+            if not self.human_player:
+                break
+
+            self.computer_player.move_ships()
+            self.human_player.move_ships()
+
+            print("Ход компьютера")
+
+            self.human_player.show()
+
+            x, y = randint(0, self.human_player.size - 1), randint(0, self.human_player.size - 1)
+
+            if self.human_player[x, y] == 1:
+                print("Ранен!")
+                self.make_shoot(self.human_player, x, y)
+
+                continue
+
+            elif self.human_player[x, y] == 2:
+                print("Эта клетка уже обстреляна! Выбери другую")
+                continue
+
+            elif self.human_player[x, y] == 0:
+                print("Мимо!")
+                break
+
+    def human_move(self):
+
+        while True:
+            if not self.computer_player:
+                break
+
+            self.computer_player.move_ships()
+            self.human_player.move_ships()
+
+            print("Ход человека")
+            self.computer_player.update_ships_position()
+            self.enemies_locator(self.computer_player.get_pole())
+
+            try:
+                x, y = map(lambda x: int(x) - 1, input("Введите координаты x, y через пробел:\n").split())
+            except ValueError:
+                print("Неверный формат координат. Попробуй ещё раз")
+                continue
+
+            try:
+                if self.computer_player[x, y] == 1:
+                    print("Ранен!")
+                    self.make_shoot(self.computer_player, x, y)
+
+                    continue
+
+                elif self.computer_player[x, y] == 2:
+                    print("Эта клетка уже обстреляна! Выбери другую")
+                    continue
+
+                elif self.computer_player[x, y] == 0:
+                    print("Мимо!")
+                    break
+            except IndexError as e:
+                print(e)
+                continue
+
+    def check_win(self):
+        if not self.computer_player:
+            print("Вы победили! :)")
+        else:
+            print("Вы проиграли! :(")
+
+    def enemies_locator(self, pole):
+
+        for row in pole:
+            for cell in row:
+                print("X" if cell == 2 else 0, end=' ')
+            print()
+
+
+sb = SeaBattle(10)
+
+sb.start_game()
